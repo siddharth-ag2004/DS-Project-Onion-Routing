@@ -28,6 +28,7 @@ func GetAvaliableAddress() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	addr := fmt.Sprintf("localhost:%v", port)
+
+	addr := fmt.Sprintf("127.0.0.1:%v", port)
 	return addr, nil
 }

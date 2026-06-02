@@ -1,3 +1,11 @@
 logs/*
-default.etcd
 tmp/*
+outputs/*
+default.etcd/*
+
+certificates/*.crt
+certificates/*.key
+certificates/*.csr
+certificates/*.srl
+
+protofiles/*.pb.go

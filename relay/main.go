@@ -331,14 +331,21 @@ func paddingLoopRandom(etcdClient *clientv3.Client, selfAddr string) {
 
 		fmt.Println("Size of encrypted message: ", len(encryptedMessage))
 
-		resp, err := client.RelayNodeRPC(context.Background(), &routingpb.RelayRequest{Message: encryptedMessage})
+		resp, err := client.RelayNodeRPC(
+			context.Background(),
+			&routingpb.RelayRequest{Message: encryptedMessage},
+		)
+		
 		if err != nil {
 			log.Printf("Padding failed to %s: %v", target.Address, err)
-		} 
-		fmt.Printf("Padding sent to %s: %s\n", target.Address, resp.Reply)
-		// else {
-		// 	log.Printf("Sent padding to: %s", target.Address)
-		// }
+		} else {
+			fmt.Printf(
+				"Padding sent to %s: %s\n",
+				target.Address,
+				string(resp.Reply),
+			)
+		}
+		
 		conn.Close()
 
 
