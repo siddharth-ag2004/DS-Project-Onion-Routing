@@ -225,13 +225,22 @@ func main() {
 			break;
 		}
 		var message string
+
 		switch reqType {
 		case 1:
-			message = "Hi, This is Client" // greet message
+			message = "Hi, This is Client"
+
 		case 2:
-			message = "10"  // nth fibonacci
+			var n int
+			fmt.Print("Enter n for Fibonacci: ")
+			fmt.Scan(&n)
+			message = fmt.Sprintf("%d", n)
+
 		case 3:
-			message = "5"  // n random numbers generator
+			var n int
+			fmt.Print("Enter n for random numbers: ")
+			fmt.Scan(&n)
+			message = fmt.Sprintf("%d", n)
 		}
 		
 		for i := 0 ; i < MAX_ATTEMPTS ; i++{

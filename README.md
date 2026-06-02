@@ -1,72 +1,386 @@
 # Onion Routing Network
 
-A Tor-inspired onion routing network built in Go, designed to provide secure, anonymous communication between clients and servers. This project implements multi-layered encryption, randomized path selection, and traffic analysis resistance to ensure high privacy for data packets traveling across the network.
+A Tor-inspired anonymous communication network built in Go using multi-hop onion encryption, gRPC, TLS, and etcd-based relay discovery.
 
-## Features
-
-- **Multi-layered Encryption:** Uses AES-256 for symmetric encryption and RSA-4096 for secure key exchanges, ensuring robust data confidentiality.
-- **Randomized Path Selection:** Routes packets through random relay nodes, obscuring the source and destination of the traffic.
-- **Traffic Analysis Resistance:** Implements random packet padding to thwart traffic analysis and timing attacks.
-- **Adaptive Load Balancing:** Dynamically distributes traffic across relays to minimize congestion, resulting in a ~25% reduction in response time.
-- **Session Management:** Securely manages active communication sessions and handles node failures gracefully.
-- **gRPC Communication:** Utilizes Protocol Buffers (Protobuf) and gRPC for fast and reliable inter-node communication.
-- **Service Discovery:** Uses `etcd` for managing active relay nodes and directory services.
+---
 
 ## Architecture
 
-The network consists of several key components:
+<p align="center">
+  <img src="assets/architecture.png" alt="Onion Routing Architecture" width="1000">
+</p>
 
-1. **Client (`/client`):** Initiates the communication, requests a path from the directory server, encrypts the payload in multiple layers (the "onion"), and sends it to the entry node.
-2. **Directory Server (`/directory`):** Maintains a list of active relay nodes and provides random paths to clients.
-3. **Relay Nodes (`/relay`):** The intermediaries in the network. Each node peels off one layer of encryption using its private key and forwards the packet to the next node.
-4. **Server (`/server`):** The final destination that receives the decrypted message and processes the request.
+The client constructs a multi-layer encrypted onion packet and forwards it through a randomly selected path of relay nodes. Each relay removes one encryption layer before forwarding the packet to the next hop. The exit relay communicates with the destination server and returns the response through the same circuit.
+
+---
+
+## Overview
+
+This project implements an onion routing network that enables clients to communicate with destination servers through multiple relay nodes without revealing the complete communication path to any single participant.
+
+The system combines:
+
+* Multi-hop relay routing
+* Layered ("onion") encryption
+* Distributed relay discovery using etcd
+* Mutual TLS authentication
+* Randomized circuit construction
+* Traffic-analysis resistance through padding traffic
+* Adaptive relay selection using load information
+
+The architecture is inspired by the core ideas behind the Tor network while remaining lightweight and educational.
+
+---
+
+## Key Features
+
+### Multi-Layer Onion Encryption
+
+Each relay decrypts only its own encryption layer.
+
+As a result:
+
+* Entry relay knows the client but not the destination
+* Exit relay knows the destination but not the client
+* Intermediate relays know neither endpoint
+
+---
+
+### Hybrid Cryptography
+
+| Purpose              | Algorithm          |
+| -------------------- | ------------------ |
+| Key Exchange         | RSA-4096           |
+| Payload Encryption   | RC4                |
+| Transport Security   | TLS                |
+| Relay Authentication | X.509 Certificates |
+
+---
+
+### Randomized Circuit Construction
+
+Clients build circuits through randomly selected relays.
+
+Benefits:
+
+* Improves anonymity
+* Reduces route predictability
+* Makes correlation attacks more difficult
+
+---
+
+### Traffic Analysis Resistance
+
+Relay nodes periodically generate padding traffic.
+
+This creates:
+
+* Dummy packets
+* Additional network noise
+* Reduced effectiveness of timing attacks
+
+---
+
+### Adaptive Relay Selection
+
+Relay nodes publish load information through etcd.
+
+Clients can select routes that:
+
+* Avoid overloaded nodes
+* Improve latency
+* Distribute traffic more evenly
+
+---
+
+### Service Discovery with etcd
+
+Relay nodes dynamically register themselves in etcd.
+
+The system automatically:
+
+* Discovers active relay nodes
+* Removes expired nodes using leases
+* Monitors relay availability
+
+---
+
+### Secure Transport
+
+All communication channels are protected using TLS.
+
+This prevents:
+
+* Passive packet inspection
+* Relay impersonation
+* Man-in-the-middle attacks
+
+---
+
+## Project Structure
+
+```text
+.
+├── client/                # Client implementation
+├── relay/                 # Relay node implementation
+├── server/                # Destination server
+├── encryption/            # Cryptographic primitives
+├── protofiles/            # Protocol Buffer definitions
+├── utils/                 # Shared utilities
+├── scripts/
+│   └── generate_certificates.sh
+├── assets/
+│   └── architecture.png
+├── logs/
+├── Makefile
+├── go.mod
+└── README.md
+```
+
+---
+
+## Technologies Used
+
+* Go
+* gRPC
+* Protocol Buffers
+* etcd
+* TLS
+* RSA-4096
+* Concurrent Programming
+* Distributed Systems
+* Applied Cryptography
+* Onion Routing Concepts
+
+---
+
+# Getting Started
 
 ## Prerequisites
 
-- **Go 1.18+**
-- **Protocol Buffers Compiler (`protoc`)**
-- **etcd:** Used for distributed key-value store and directory service.
+### Go
 
-## Getting Started
+Install Go:
 
-### 1. Start `etcd`
-Ensure `etcd` is installed and running locally on port `2379`:
+https://go.dev/dl/
+
+Verify installation:
+
 ```bash
-make etcd
+go version
 ```
 
-### 2. Generate Protobuf Files
-Compile the gRPC services:
+---
+
+### Protocol Buffers
+
+Install protoc:
+
+https://protobuf.dev/downloads/
+
+Verify installation:
+
+```bash
+protoc --version
+```
+
+---
+
+### etcd
+
+Install etcd:
+
+https://etcd.io/docs/
+
+Verify installation:
+
+```bash
+etcd --version
+```
+
+---
+
+# Setup
+
+## Clone Repository
+
+```bash
+git clone https://github.com/siddharth-ag2004/DS-Project-Onion-Routing.git
+
+cd DS-Project-Onion-Routing
+```
+
+---
+
+## Install Dependencies
+
+```bash
+go mod tidy
+```
+
+---
+
+## Generate TLS Certificates
+
+Certificates are intentionally not tracked by Git.
+
+Generate fresh certificates:
+
+```bash
+cd scripts
+
+chmod +x generate_certificates.sh
+
+./generate_certificates.sh
+
+cd ..
+```
+
+This creates:
+
+```text
+certificates/
+├── ca.crt
+├── ca.key
+├── client.crt
+├── client.key
+├── relay_node.crt
+├── relay_node.key
+├── server.crt
+└── server.key
+```
+
+---
+
+## Generate gRPC Files
+
 ```bash
 make proto
 ```
 
-### 3. Start the Directory Server
+---
+
+# Running the System
+
+Open separate terminal windows.
+
+---
+
+## Terminal 1 — Start etcd
+
 ```bash
-make directory
+make etcd
 ```
 
-### 4. Start Relay Nodes
-Open multiple terminal tabs to start several relay nodes with unique IDs:
-```bash
-make relay RELAY_NODE_ID=1
-make relay RELAY_NODE_ID=2
-make relay RELAY_NODE_ID=3
-```
+---
 
-### 5. Start the Destination Server
+## Terminal 2 — Start Destination Server
+
 ```bash
 make server
 ```
 
-### 6. Run the Client
-Start a client to send traffic through the onion network:
+---
+
+## Terminal 3 — Start Relay Node 1
+
+```bash
+export SSLKEYLOGFILE=$(pwd)/tmp/sslkeys.log
+
+make relay RELAY_NODE_ID=1
+```
+
+---
+
+## Terminal 4 — Start Relay Node 2
+
+```bash
+export SSLKEYLOGFILE=$(pwd)/tmp/sslkeys.log
+
+make relay RELAY_NODE_ID=2
+```
+
+---
+
+## Terminal 5 — Start Relay Node 3
+
+```bash
+export SSLKEYLOGFILE=$(pwd)/tmp/sslkeys.log
+
+make relay RELAY_NODE_ID=3
+```
+
+---
+
+## Terminal 6 — Run Client
+
 ```bash
 make client CLIENT_ID=1001
 ```
 
-## Cleaning Up
-To clear logs generated during execution:
+---
+
+## Client Requests
+
+After the circuit is established, the client prompts:
+
+```text
+Enter Request Type:
+```
+
+Available request types:
+
+| Request Type | Operation                    |
+| ------------ | ---------------------------- |
+| 1            | Greeting Request             |
+| 2            | Compute nth Fibonacci Number |
+| 3            | Generate Random Number      |
+| 0            | Exit Client                  |
+
+Example:
+
+```text
+Enter Request Type: 1
+Response received from server(Decrypted): Welcome, This is Onion-Routing Server
+
+Enter Request Type: 2
+Enter n for Fibonacci: 10
+Response received from server(Decrypted): 55
+
+Enter Request Type: 3
+Enter n for random numbers: 4
+Response received from server(Decrypted): 3, 31, 47, 44
+
+Enter Request Type: 0
+Exiting Client
+```
+
+---
+
+## Example Workflow
+
+1. Relay nodes register with etcd.
+2. Client discovers active relay nodes.
+3. Client randomly selects a relay path.
+4. A multi-layer onion-encrypted circuit is created.
+5. The request traverses multiple relays.
+6. Each relay decrypts exactly one layer.
+7. The exit relay contacts the destination server.
+8. The response travels back through the same circuit.
+9. The client decrypts all response layers and displays the result.
+
+---
+
+## Cleaning Logs
+
 ```bash
 make clean_logs
 ```
+
+---
+
+## Author
+
+**Siddharth Agarwal**
+
+GitHub: https://github.com/siddharth-ag2004
