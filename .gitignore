@@ -9,3 +9,5 @@ certificates/*.csr
 certificates/*.srl
 
 protofiles/*.pb.go
+
+.DS_Store.DS_Store
